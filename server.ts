@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 
@@ -760,11 +759,16 @@ app.get("/api/clash/model-metrics", (req, res) => {
 // Serve frontend assets
 if (process.env.NODE_ENV !== "production") {
   const startVite = async () => {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.error("Vite failed to load in development:", e);
+    }
   };
   startVite();
 } else {
@@ -775,6 +779,10 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Clash Royale Meta API server started on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Clash Royale Meta API server started on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
